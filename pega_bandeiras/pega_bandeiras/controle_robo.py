@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
 
@@ -11,6 +10,16 @@ from scipy.spatial.transform import Rotation as R
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
+from enum import Enum
+
+
+class ESTADOS(Enum):
+    EXPLORANDO = 1
+    BANDEIRA_ENCONTRADA = 2
+    INDO_PARA_BANDEIRA = 3
+    POSICIONANDO_NA_BANDEIRA = 4
+    DESVIANDO = 5
+
 
 class ControleRobo(Node):
 
@@ -24,7 +33,8 @@ class ControleRobo(Node):
         self.create_subscription(LaserScan, '/scan', self.scan_callback, 10)
         self.create_subscription(Imu, '/imu', self.imu_callback, 10)
         self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
-        self.create_subscription(Image, '/robot_cam/colored_map', self.camera_callback, 10)
+        self.create_subscription(
+            Image, '/robot_cam/colored_map', self.camera_callback, 10)
 
         # Utilizado para converter imagens ROS -> OpenCV
         self.bridge = CvBridge()
@@ -34,6 +44,19 @@ class ControleRobo(Node):
 
         # Estado interno
         self.obstaculo_a_frente = False
+        self.direcao_obstaculo = 0   #1 -> direita e -1 -> esquerda
+        self.percentual_bandeira = -1
+        self.menor_distancia_esquerda = -1
+        self.menor_distancia_direita = -1
+        self.bandeira_a_frente = False
+        self.estado_atual = ESTADOS.EXPLORANDO
+        self.chegou_na_bandeira = False
+        self.giro_desvio = 0
+
+        self.pos_x_bandeira = -1
+        self.centro_x = -1
+        self.dx = 30
+        self.distancia_frente = float('inf')
 
     def scan_callback(self, msg: LaserScan):
         # Verifica uma faixa estreita ao redor de 0° (frente)
@@ -42,45 +65,47 @@ class ControleRobo(Node):
             return
 
         # Índices de -30° a +30° (equivalente a 330 até 30)
-        indices_frente = list(range(330, 360)) + list(range(0, 31))
+        indices_frente_direita = list(range(330, 360))
+        indices_frente_esquerda = list(range(0, 31))
+        indices_direita = list(range(240, 360))
+        indices_esquerda = list(range(0, 120))
 
-        # Filtra distancias
-        distancias = [msg.ranges[i] for i in indices_frente]
+        # Filtra distancias 
+        distancias_frente_esquerda = [msg.ranges[i] for i in indices_frente_esquerda]
+        distancias_frente_direita = [msg.ranges[i] for i in indices_frente_direita]
+        
+        dist_esq = msg.ranges[0]
+        self.menor_distancia_esquerda = 0
+        for i in range(1,120):
+            if msg.ranges[i] < dist_esq:
+                dist_esq = msg.ranges[i]
+                self.menor_distancia_esquerda = i
+        
+        dist_dir = msg.ranges[240]
+        self.menor_distancia_direita = 240
+        for i in range(240,360):
+            if msg.ranges[i] < dist_dir:
+                dist_dir = msg.ranges[i]
+                self.menor_distancia_direita = i
 
-        if distancias and min(distancias) < 0.5:
+        self.distancia_frente = msg.ranges[0]
+        
+        if distancias_frente_esquerda and min(distancias_frente_esquerda) < 0.8:
             self.obstaculo_a_frente = True
-            self.get_logger().info('Obstáculo detectado a {:.2f}m à frente'.format(min(distancias)))
+            self.direcao_obstaculo = -1
+        elif distancias_frente_direita and min(distancias_frente_direita) < 0.8:
+            self.obstaculo_a_frente = True
+            self.direcao_obstaculo = 1
+        elif distancias_frente_direita and min(distancias_frente_direita) < 0.8 and distancias_frente_esquerda and min(distancias_frente_esquerda) < 0.8:
+            if min(distancias_frente_esquerda) < min(distancias_frente_direita):
+                self.direcao_obstaculo = -1
+            else:
+                self.direcao_obstaculo = 1
+            self.obstaculo_a_frente = True
         else:
             self.obstaculo_a_frente = False
 
     def imu_callback(self, msg: Imu):
-        # # Extraindo o quaternion da mensagem
-        # orientation_q = msg.orientation
-        # quat = [
-        #     orientation_q.x,
-        #     orientation_q.y,
-        #     orientation_q.z,
-        #     orientation_q.w
-        # ]
-
-        # # Conversão para Euler usando SciPy
-        # r = R.from_quat(quat)
-        # roll, pitch, yaw = r.as_euler('xyz', degrees=True)
-
-        # # Exibindo resultados
-        # self.get_logger().info('IMU Data Received:')
-        # self.get_logger().info(
-        #     f'Orientation (Euler): Roll={roll:.2f}°, '
-        #     f'Pitch={pitch:.2f}°, Yaw={yaw:.2f}°'
-        # )
-        # self.get_logger().info(
-        #     f'Angular velocity: [{msg.angular_velocity.x:.2f}, '
-        #     f'{msg.angular_velocity.y:.2f}, {msg.angular_velocity.z:.2f}] rad/s'
-        # )
-        # self.get_logger().info(
-        #     f'Linear acceleration: [{msg.linear_acceleration.x:.2f}, '
-        #     f'{msg.linear_acceleration.y:.2f}, {msg.linear_acceleration.z:.2f}] m/s²'
-        # )
         pass
 
     def odom_callback(self, msg: Odometry):
@@ -91,37 +116,148 @@ class ControleRobo(Node):
         # Converte mensagem ROS para imagem OpenCV (BGR)
         frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
-        # Define a cor-alvo em BGR
-        target_color = np.array([171, 242, 0])  # OBS: OpenCV usa BGR
+        h, w = frame.shape[:2]
+        self.centro_x = w // 2
 
-        # Cria máscara para cor exata
+        # Cor da bandeira (BGR)
+        target_color = np.array([227, 73, 0])
+
+        # Máscara
         mask = cv2.inRange(frame, target_color, target_color)
 
-        # # Mostra a máscara em uma janela para debug
-        # cv2.imshow('Mascara de Blobs #00f2ab', mask)
-        # cv2.waitKey(1)  # Tempo mínimo para a janela atualizar (1 ms)
+        # Quantos pixels da imagem pertencem à bandeira
+        pixels_bandeira = cv2.countNonZero(mask)
+        area_imagem = h * w
+        self.percentual_bandeira = pixels_bandeira / area_imagem
 
-        # Detecta contornos (blobs)
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # Detecta contornos
+        contours, _ = cv2.findContours(
+            mask,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE
+        )
 
-        # Conta e localiza blobs
-        self.get_logger().info(f'{len(contours)} blob(s) encontrados com cor #00f2ab:')
-        for i, cnt in enumerate(contours):
-            M = cv2.moments(cnt)
+        self.bandeira_a_frente = len(contours) > 0
+
+        # Valores padrão
+        #self.pos_x_bandeira = None
+        self.area_bandeira = self.percentual_bandeira
+
+        if contours:
+            # Seleciona apenas o maior blob
+            maior_contorno = max(contours, key=cv2.contourArea)
+
+            M = cv2.moments(maior_contorno)
+
             if M['m00'] != 0:
                 cx = int(M['m10'] / M['m00'])
                 cy = int(M['m01'] / M['m00'])
-                self.get_logger().info(f'  Blob {i+1}: posição (x={cx}, y={cy})')
+
+                self.pos_x_bandeira = cx
+
+            area_blob = cv2.contourArea(maior_contorno)
+
+            # self.get_logger().info(
+            #     f'Bandeira: {self.percentual_bandeira*100:.1f}% da imagem'
+            # )
+
+            # Ajuste esse limiar experimentalmente
+            self.chegou_na_bandeira = self.percentual_bandeira > 0.025
+
+        
 
     def move_robot(self):
+
+        if self.estado_atual == ESTADOS.EXPLORANDO: print("EXPLORANDO")
+        if self.estado_atual == ESTADOS.BANDEIRA_ENCONTRADA: print("BANDEIRA_ENCONTRADA")
+        if self.estado_atual == ESTADOS.INDO_PARA_BANDEIRA: print("INDO_PARA_BANDEIRA")
+        if self.estado_atual == ESTADOS.POSICIONANDO_NA_BANDEIRA: print("POSICIONANDO_NA_BANDEIRA")
+        if self.estado_atual == ESTADOS.DESVIANDO: print("DESVIANDO")
+
         twist = Twist()
-        if not self.obstaculo_a_frente:
-            twist.linear.x = 0.1  # Move para frente
-        else:
-            twist.angular.z = -0.3  # Gira em torno do proprio eixo
+
+        if self.chegou_na_bandeira and self.obstaculo_a_frente:
+            self.estado_atual = ESTADOS.POSICIONANDO_NA_BANDEIRA
+
+        elif self.estado_atual == ESTADOS.EXPLORANDO:
+            if not self.obstaculo_a_frente:
+                twist.linear.x = 0.5  # Move para frente
+            else:
+                twist.angular.z = -0.3  # Gira em torno do proprio eixo
+
+            if self.bandeira_a_frente:
+                self.estado_atual = ESTADOS.BANDEIRA_ENCONTRADA
+
+        elif self.estado_atual == ESTADOS.BANDEIRA_ENCONTRADA:
+
+            print("AA")
+
+            if self.pos_x_bandeira < self.centro_x - self.dx:
+                twist.angular.z = 0.3  # Gira em torno do proprio eixo
+            elif self.pos_x_bandeira > self.centro_x + self.dx:
+                twist.angular.z = -0.3  # Gira em torno do proprio eixo
+            elif self.pos_x_bandeira <= self.centro_x + self.dx and self.pos_x_bandeira >= self.centro_x - self.dx:
+                self.estado_atual = ESTADOS.INDO_PARA_BANDEIRA
+            
+            twist.linear.x = 0.5
+
+        elif self.estado_atual == ESTADOS.INDO_PARA_BANDEIRA:
+
+            print(self.percentual_bandeira)
+
+            if not self.obstaculo_a_frente:
+                if self.bandeira_a_frente and not (self.pos_x_bandeira < self.centro_x + self.dx and self.pos_x_bandeira > self.centro_x - self.dx):
+                    self.estado_atual = ESTADOS.BANDEIRA_ENCONTRADA
+                    self.giro_desvio = 0
+                if self.giro_desvio != 0:
+                    twist.angular.z = self.giro_desvio * 0.3
+                else:
+                    twist.linear.x = 0.5
+            else:
+                self.estado_atual = ESTADOS.DESVIANDO 
+
+            if not self.bandeira_a_frente and self.giro_desvio == 0:
+                self.estado_atual = ESTADOS.EXPLORANDO
+        
+        elif self.estado_atual == ESTADOS.DESVIANDO:
+            if not self.obstaculo_a_frente:
+                if self.direcao_obstaculo == -1:
+                    if self.pos_x_bandeira > self.centro_x + self.dx :
+                        self.estado_atual = ESTADOS.INDO_PARA_BANDEIRA
+                    elif self.menor_distancia_esquerda < 90:
+                        twist.linear.x = 0.5
+                    else:
+                        self.direcao_obstaculo = 0
+                        self.giro_desvio = 1
+                        twist.angular.z = 0.3
+                        self.estado_atual = ESTADOS.INDO_PARA_BANDEIRA
+                elif self.direcao_obstaculo == 1:
+                    if self.pos_x_bandeira < self.centro_x - self.dx :
+                        self.estado_atual = ESTADOS.INDO_PARA_BANDEIRA
+                    elif self.menor_distancia_direita > 270:
+                        twist.linear.x = 0.5
+                    else:
+                        self.direcao_obstaculo = 0
+                        self.giro_desvio = -1
+                        twist.angular.z = -0.3
+                        self.estado_atual = ESTADOS.INDO_PARA_BANDEIRA
+            else:   
+                if self.direcao_obstaculo == -1:
+                    twist.angular.z = -0.3
+                elif self.direcao_obstaculo == 1:
+                    twist.angular.z = 0.3
+
+        elif self.estado_atual == ESTADOS.POSICIONANDO_NA_BANDEIRA:
+            if self.pos_x_bandeira < self.centro_x - self.dx:
+                twist.angular.z = 0.3  # Gira em torno do proprio eixo
+            elif self.pos_x_bandeira > self.centro_x + self.dx:
+                twist.angular.z = -0.3  # Gira em torno do proprio eixo
+            twist.linear.x = 0.0
+            twist.linear.y = 0.0
+            twist.angular.z = 0.0
+
 
         self.cmd_vel_pub.publish(twist)
-
 
 def main(args=None):
     rclpy.init(args=args)
