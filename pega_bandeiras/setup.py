@@ -58,10 +58,10 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'tartaruga = prm_2026.controle_tartaruga:main',
-            'ground_truth_odometry = prm_2026.ground_truth_odometry:main',
-            'controle_robo = prm_2026.controle_robo:main',
-            'robo_mapper = prm_2026.robo_mapper:main'
+            'tartaruga = pega_bandeiras.controle_tartaruga:main',
+            'ground_truth_odometry = pega_bandeiras.ground_truth_odometry:main',
+            'controle_robo = pega_bandeiras.controle_robo:main',
+            'robo_mapper = pega_bandeiras.robo_mapper:main'
         ],
     },
 )
