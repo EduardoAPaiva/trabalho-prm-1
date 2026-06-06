@@ -64,7 +64,7 @@ class ControleRobo(Node):
         self.ultima_posx_bandeira = -1              # Ultima posicao da bandeira vista na tela (caso saia da camera)
         self.centro_x = -1                          # Centro horizontal da imagem (tamanho horizontal dividido por 2)
         self.dx = 20                                # Tolerancia em pixels para considerar a bandeira no centro da imagem
-        self.dx_mastro = 5                          # Tolerancia em pixels para considerar o mastro da bandeira no centro da imagem
+        self.dx_mastro = 3                          # Tolerancia em pixels para considerar o mastro da bandeira no centro da imagem
 
     # FUNCAO QUE RECEBE OS DADOS DO LIDAR
     def scan_callback(self, msg: LaserScan):
@@ -378,10 +378,10 @@ class ControleRobo(Node):
                 self.estado_atual = ESTADOS.EXPLORANDO
             # Caso o mastro esteja a esquerda do centro da imagem, gira para a direita ate alinhar
             elif self.pos_x_mastro < self.centro_x - self.dx_mastro:
-                twist.angular.z = 0.3  # Gira em torno do proprio eixo
+                twist.angular.z = 0.2  # Gira em torno do proprio eixo
             # Caso o mastro esteja a direita do centro da imagem, gira para a esquerda ate alinhar
             elif self.pos_x_mastro > self.centro_x + self.dx_mastro:
-                twist.angular.z = -0.3  # Gira em torno do proprio eixo
+                twist.angular.z = -0.2  # Gira em torno do proprio eixo
             # Caso o mastro esteja no centro da imagem, fica parado
             else:
                 twist.linear.x = 0.0
