@@ -59,6 +59,7 @@
         <box size="${base_length} ${base_width} ${base_height}"/>
       </geometry>
       <material name="DarkBlue">
+        <!-- <color rgba="0.09 0.30 0.46 1.0"/> -->
         <color rgba="0.82 0.67 0.15 1.0"/>
       </material>
     </visual>
@@ -93,7 +94,7 @@
           <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
         </geometry>
         <material name="LightBlue">
-          <color rgba="0.25 0.25 0.25 1.0"/>
+          <color rgba="0.11 0.37 0.56 1.0"/>
         </material>
       </visual>
 
@@ -125,7 +126,7 @@
         <sphere radius="${(wheel_radius+wheel_zoff-(base_height/2))}"/>
       </geometry>
       <material name="DarkBlue">
-        <color rgba="0.82 0.67 0.15 1.0"/>
+        <color rgba="0.09 0.30 0.46 1.0"/>
       </material>
     </visual>
 
@@ -338,7 +339,7 @@
         <cylinder radius="0.0508" length="0.055"/>
       </geometry>
       <material name="LightBlue">
-        <color rgba="0.82 0.67 0.15 1.0"/>
+        <color rgba="0.11 0.37 0.56 1.0"/>
       </material>
     </visual>
   </link>
@@ -408,144 +409,6 @@
     <parent link="base_link"/>
     <child link="camera_link"/>
     <origin xyz="0.215 0 0.05" rpy="0 0 0"/>
-  </joint>
-
-  <!--PESCOÇO ESTILO WALL-E-->
-
-  <link name="neck_link">
-
-    <visual>
-      <geometry>
-        <cylinder radius="0.015" length="0.18"/>
-      </geometry>
-
-      <material name="DarkGray">
-        <color rgba="0.3 0.3 0.3 1.0"/>
-      </material>
-    </visual>
-
-    <collision>
-      <geometry>
-        <cylinder radius="0.015" length="0.18"/>
-      </geometry>
-    </collision>
-
-    <xacro:cylinder_inertia m="0.10" r="0.015" h="0.18"/>
-
-  </link>
-
-  <joint name="neck_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="neck_link"/>
-
-    <!-- topo do corpo -->
-    <origin xyz="0.0 0.0 0.20" rpy="0 0 0"/>
-  </joint>
-
-  <!--CABEÇA WALL-E-->
-
-  <link name="head_link">
-
-    <visual>
-      <geometry>
-        <box size="0.14 0.08 0.06"/>
-      </geometry>
-
-      <material name="WallEYellow">
-        <color rgba="0.82 0.67 0.15 1.0"/>
-      </material>
-    </visual>
-
-    <collision>
-      <geometry>
-        <box size="0.14 0.08 0.06"/>
-      </geometry>
-    </collision>
-
-    <xacro:box_inertia
-      m="0.20"
-      w="0.08"
-      h="0.06"
-      d="0.14"/>
-
-  </link>
-
-  <joint name="head_joint" type="fixed">
-    <parent link="neck_link"/>
-    <child link="head_link"/>
-
-    <!-- topo do pescoço -->
-    <origin xyz="0 0 0.12" rpy="0 0 0"/>
-  </joint>
-
-  <!--OLHO ESQUERDO-->
-
-  <link name="left_eye">
-
-    <visual>
-      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
-
-      <geometry>
-        <cylinder radius="0.03" length="0.05"/>
-      </geometry>
-
-      <material name="DarkGray">
-        <color rgba="0.25 0.25 0.25 1.0"/>
-      </material>
-    </visual>
-
-    <collision>
-      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
-
-      <geometry>
-        <cylinder radius="0.03" length="0.05"/>
-      </geometry>
-    </collision>
-
-    <xacro:cylinder_inertia m="0.05" r="0.03" h="0.05"/>
-
-  </link>
-
-  <joint name="left_eye_joint" type="fixed">
-    <parent link="head_link"/>
-    <child link="left_eye"/>
-
-    <origin xyz="0.04 0.045 0" rpy="0 0 0"/>
-  </joint>
-
-  <!--OLHO DIREITO-->
-
-  <link name="right_eye">
-
-    <visual>
-      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
-
-      <geometry>
-        <cylinder radius="0.03" length="0.05"/>
-      </geometry>
-
-      <material name="DarkGray">
-        <color rgba="0.25 0.25 0.25 1.0"/>
-      </material>
-    </visual>
-
-    <collision>
-      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
-
-      <geometry>
-        <cylinder radius="0.03" length="0.05"/>
-      </geometry>
-    </collision>
-
-    <xacro:cylinder_inertia m="0.05" r="0.03" h="0.05"/>
-
-  </link>
-
-  <joint name="right_eye_joint" type="fixed">
-    <parent link="head_link"/>
-    <child link="right_eye"/>
-
-    <origin xyz="0.04 -0.045 0" rpy="0 0 0"/>
   </joint>
 
   <link name="camera_frame"/>
