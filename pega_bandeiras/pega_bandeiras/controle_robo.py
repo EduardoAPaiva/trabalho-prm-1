@@ -54,6 +54,7 @@ class ControleRobo(Node):
         self.giro_desvio = 0
 
         self.pos_x_bandeira = -1
+        self.ultima_posx_bandeira = -1
         self.centro_x = -1
         self.dx = 30
         self.distancia_frente = float('inf')
@@ -90,13 +91,13 @@ class ControleRobo(Node):
 
         self.distancia_frente = msg.ranges[0]
         
-        if distancias_frente_esquerda and min(distancias_frente_esquerda) < 0.8:
+        if distancias_frente_esquerda and min(distancias_frente_esquerda) < 0.7:
             self.obstaculo_a_frente = True
             self.direcao_obstaculo = -1
-        elif distancias_frente_direita and min(distancias_frente_direita) < 0.8:
+        elif distancias_frente_direita and min(distancias_frente_direita) < 0.7:
             self.obstaculo_a_frente = True
             self.direcao_obstaculo = 1
-        elif distancias_frente_direita and min(distancias_frente_direita) < 0.8 and distancias_frente_esquerda and min(distancias_frente_esquerda) < 0.8:
+        elif distancias_frente_direita and min(distancias_frente_direita) < 0.7 and distancias_frente_esquerda and min(distancias_frente_esquerda) < 0.7:
             if min(distancias_frente_esquerda) < min(distancias_frente_direita):
                 self.direcao_obstaculo = -1
             else:
@@ -140,7 +141,8 @@ class ControleRobo(Node):
         self.bandeira_a_frente = len(contours) > 0
 
         # Valores padrão
-        #self.pos_x_bandeira = None
+        self.ultima_posx_bandeira = self.pos_x_bandeira
+        self.pos_x_bandeira = None
         self.area_bandeira = self.percentual_bandeira
 
         if contours:
@@ -183,23 +185,25 @@ class ControleRobo(Node):
             if not self.obstaculo_a_frente:
                 twist.linear.x = 0.5  # Move para frente
             else:
-                twist.angular.z = -0.3  # Gira em torno do proprio eixo
+                twist.angular.z = self.direcao_obstaculo * 0.3  # Gira em torno do proprio eixo
 
             if self.bandeira_a_frente:
                 self.estado_atual = ESTADOS.BANDEIRA_ENCONTRADA
 
         elif self.estado_atual == ESTADOS.BANDEIRA_ENCONTRADA:
 
-            print("AA")
+            if self.pos_x_bandeira == None:
+                self.estado_atual = ESTADOS.EXPLORANDO
 
-            if self.pos_x_bandeira < self.centro_x - self.dx:
+            elif self.pos_x_bandeira < self.centro_x - self.dx:
                 twist.angular.z = 0.3  # Gira em torno do proprio eixo
             elif self.pos_x_bandeira > self.centro_x + self.dx:
                 twist.angular.z = -0.3  # Gira em torno do proprio eixo
             elif self.pos_x_bandeira <= self.centro_x + self.dx and self.pos_x_bandeira >= self.centro_x - self.dx:
                 self.estado_atual = ESTADOS.INDO_PARA_BANDEIRA
-            
-            twist.linear.x = 0.5
+            else:
+                self.estado_atual = ESTADOS.EXPLORANDO
+        
 
         elif self.estado_atual == ESTADOS.INDO_PARA_BANDEIRA:
 
