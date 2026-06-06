@@ -29,16 +29,16 @@ Navegue até a pasta do workspace:
 cd ~/seu_workspace
 ```
 
-Carregue o ambiente ROS 2:
-
-```bash
-source install/setup.bash
-```
-
 Compile o pacote usando o comando:
 
 ```bash
 colcon build
+```
+
+Carregue o ambiente ROS 2:
+
+```bash
+source install/setup.bash
 ```
 
 Inicie o primeiro nó:
@@ -99,6 +99,7 @@ ros2 run pega_bandeiras controle_robo.py
 
 ```bash
 cd ~/seu_workspace
+colcon build
 source install/setup.bash
 ros2 launch pega_bandeiras inicia_simulacao.launch.py
 ```
