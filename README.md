@@ -1,5 +1,10 @@
 # Trabalho de Programação de Robôs Móveis - Robô que encontra e pega bandeiras
 
+## Autores
+
+- Eduardo Alves Paiva - 15448481
+- Henrique Ribeiro de Figueiredo - 15645007
+
 ## Pré-requisitos
 
 Certifique-se de que o workspace já foi compilado e que todas as dependências do ROS 2 estão instaladas.
