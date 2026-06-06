@@ -42,6 +42,10 @@ class ControleRobo(Node):
         # Timer para enviar comandos continuamente
         self.timer = self.create_timer(0.1, self.move_robot)
 
+        # Contador para evitar loop infinito
+        self.maximo_loops = 90
+        self.contador = self.maximo_loops
+
         # Estado interno
         self.obstaculo_a_frente = False             # Define se existe algo a menos de uma certa distancia usando o LIDAR
         self.direcao_obstaculo = 0                  # 1 -> direita e -1 -> esquerda
@@ -53,7 +57,7 @@ class ControleRobo(Node):
         self.chegou_na_bandeira = False             # Vira true quando uma certa portagem da bandeira ocupa a tela
         self.giro_desvio = 0                        # Define se o robo esta girando para desvio de algum obstaculo
 
-        self.const_dist_obstaculo = 0.7             # Constante que define a distancia minima para um obstaculo
+        self.const_dist_obstaculo = 0.8             # Constante que define a distancia minima para um obstaculo
 
         self.pos_x_bandeira = -1                    # Posicao horizontal da bandeira na tela
         self.pos_x_mastro = -1                      # Posicao horizontal do mastro da bandeira na tela
@@ -291,11 +295,21 @@ class ControleRobo(Node):
                 # Caso a bandeira saia do centro da imagem, volta para o estado "BANDEIRA_ENCONTRADA"
                 if self.pos_x_bandeira != None and not (self.pos_x_bandeira < self.centro_x + self.dx and self.pos_x_bandeira > self.centro_x - self.dx):
                     self.estado_atual = ESTADOS.BANDEIRA_ENCONTRADA
-                    self.giro_desvio = 0            # Tambem define o giro como zero
+                    self.giro_desvio = 0                # Tambem define o giro como zero
+                    self.contador = self.maximo_loops   # Reseta o contador de loop infinito
                 # Caso giro_desvio seja diferente de zero, esta vindo do estado "DESVIANDO"
                 # Portanto, deve continuar girando na direcao contraria ao desvio ate enxergar a bandeira novamente
                 if self.giro_desvio != 0:
+                    # Gira ate encontrar a bandeira novamente e decremente o contador
                     twist.angular.z = self.giro_desvio * 0.3
+                    self.contador = self.contador - 1
+
+                    # Caso o contador zere, volta para o estado de "EXPLORANDO"
+                    if self.contador == 0:
+                        self.giro_desvio = 0
+                        self.estado_atual = ESTADOS.EXPLORANDO
+                        self.contador = self.maximo_loops
+
                 # Caso contrario, continua andando reto ate a bandeira
                 else:
                     self.giro_desvio = 0
