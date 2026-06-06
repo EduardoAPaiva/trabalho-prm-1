@@ -35,6 +35,12 @@ Carregue o ambiente ROS 2:
 source install/setup.bash
 ```
 
+Compile o pacote usando o comando:
+
+```bash
+colcon build
+```
+
 Inicie o primeiro nó:
 
 ```bash
