@@ -26,7 +26,7 @@ Abra **três terminais** e siga os passos abaixo.
 Navegue até a pasta do workspace:
 
 ```bash
-cd ~/seu_workspace/src
+cd ~/seu_workspace
 ```
 
 Carregue o ambiente ROS 2:
@@ -54,7 +54,7 @@ ros2 launch pega_bandeiras inicia_simulacao.launch.py
 Navegue até a pasta do workspace:
 
 ```bash
-cd ~/seu_workspace/src
+cd ~/seu_workspace
 ```
 
 Carregue o ambiente ROS 2:
@@ -76,7 +76,7 @@ ros2 launch pega_bandeiras carrega_robo.launch.py
 Navegue até a pasta do workspace:
 
 ```bash
-cd ~/seu_workspace/src
+cd ~/seu_workspace
 ```
 
 Carregue o ambiente ROS 2:
@@ -98,7 +98,7 @@ ros2 run pega_bandeiras controle_robo.py
 ### Terminal 1
 
 ```bash
-cd ~/seu_workspace/src
+cd ~/seu_workspace
 source install/setup.bash
 ros2 launch pega_bandeiras inicia_simulacao.launch.py
 ```
@@ -106,7 +106,7 @@ ros2 launch pega_bandeiras inicia_simulacao.launch.py
 ### Terminal 2
 
 ```bash
-cd ~/seu_workspace/src
+cd ~/seu_workspace
 source install/setup.bash
 ros2 launch pega_bandeiras carrega_robo.launch.py
 ```
@@ -114,7 +114,7 @@ ros2 launch pega_bandeiras carrega_robo.launch.py
 ### Terminal 3
 
 ```bash
-cd ~/seu_workspace/src
+cd ~/seu_workspace
 source install/setup.bash
 ros2 run pega_bandeiras controle_robo.py
 ```
