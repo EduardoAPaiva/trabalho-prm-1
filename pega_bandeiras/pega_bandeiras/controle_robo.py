@@ -50,7 +50,9 @@ class ControleRobo(Node):
         self.obstaculo_a_frente = False             # Define se existe algo a menos de uma certa distancia usando o LIDAR
         self.direcao_obstaculo = 0                  # 1 -> direita e -1 -> esquerda
         self.percentual_bandeira = -1               # Diz a porcentagem que a bandeira ocupa na camera
+        self.menor_distancia_esquerda = -1          # Angulo da menor distancia a frente esquerda
         self.menor_distancia_esquerda = -1          # Angulo da menor distancia a esquerda
+        self.menor_distancia_direita = -1           # Angulo da menor distancia a frente direita
         self.menor_distancia_direita = -1           # Angulo da menor distancia a direita
         self.bandeira_a_frente = False              # Vira true quando a bandeira esta no centro da camera
         self.estado_atual = ESTADOS.EXPLORANDO      # Estado atual do robo na maquina de estados
@@ -61,6 +63,7 @@ class ControleRobo(Node):
 
         self.pos_x_bandeira = -1                    # Posicao horizontal da bandeira na tela
         self.pos_x_mastro = -1                      # Posicao horizontal do mastro da bandeira na tela
+        self.distancia_frente = None                # Menor distancia que o robo enxerga num angulo de 30°
         self.ultima_posx_bandeira = -1              # Ultima posicao da bandeira vista na tela (caso saia da camera)
         self.centro_x = -1                          # Centro horizontal da imagem (tamanho horizontal dividido por 2)
         self.dx = 20                                # Tolerancia em pixels para considerar a bandeira no centro da imagem
@@ -80,9 +83,8 @@ class ControleRobo(Node):
 
         distancias_frente_esquerda = [msg.ranges[i] for i in indices_frente_esquerda]   # Distancias para ate 30° a esquerda
         distancias_frente_direita = [msg.ranges[i] for i in indices_frente_direita]     # Distancias para ate 30° a direita
-        
-        
-        #Loop que calcula o angulo da menor distancia a direita
+
+        #Loop que calcula o angulo da menor distancia a esquerda
         dist_esq = msg.ranges[0]
         self.menor_distancia_esquerda = 0
         for i in range(1,120):
@@ -90,8 +92,7 @@ class ControleRobo(Node):
                 dist_esq = msg.ranges[i]
                 self.menor_distancia_esquerda = i
         
-        
-        #Loop que calcula a menor distancia a esquerda
+        #Loop que calcula a menor distancia a direita
         dist_dir = msg.ranges[240]
         self.menor_distancia_direita = 240
         for i in range(240,360):
@@ -99,16 +100,34 @@ class ControleRobo(Node):
                 dist_dir = msg.ranges[i]
                 self.menor_distancia_direita = i
 
+        #Loop que calcula o angulo da menor distancia a frente esquerda
+        dist_esq = msg.ranges[0]
+        self.menor_distancia_frente_esquerda = 0
+        for i in range(0,30):
+            if msg.ranges[i] < dist_esq:
+                dist_esq = msg.ranges[i]
+                self.menor_distancia_frente_esquerda = i
+        
+        #Loop que calcula a menor distancia a frente direita
+        dist_dir = msg.ranges[330]
+        self.menor_distancia_frente_direita = 330
+        for i in range(330,360):
+            if msg.ranges[i] < dist_dir:
+                dist_dir = msg.ranges[i]
+                self.menor_distancia_frente_direita = i
+
         # Caso observe obstaculos em ambos os lados:
         if distancias_frente_direita and min(distancias_frente_direita) < self.const_dist_obstaculo and distancias_frente_esquerda and min(distancias_frente_esquerda) < self.const_dist_obstaculo:
             # Se a menor distancia estiver a esquerda:
             if min(distancias_frente_esquerda) < min(distancias_frente_direita):
                 # Define que o obstaculo esta a esquerda
                 self.direcao_obstaculo = -1
+                self.distancia_frente = min(distancias_frente_esquerda)
             # Caso a menor distancia estiver a direita
             else:
                 # Define que o obstaculo esta a direita
                 self.direcao_obstaculo = 1
+                self.distancia_frente = min(distancias_frente_direita)
 
             #Define que existe obstaculo a frente
             self.obstaculo_a_frente = True
@@ -116,12 +135,14 @@ class ControleRobo(Node):
         # Caso so hajam obstaculos a esquerda
         elif distancias_frente_esquerda and min(distancias_frente_esquerda) < self.const_dist_obstaculo:
             # Define que o obstaculo esta a esquerda
+            self.distancia_frente = min(distancias_frente_esquerda)
             self.obstaculo_a_frente = True
             self.direcao_obstaculo = -1
 
         # Caso so hajam obstaculos a direita
         elif distancias_frente_direita and min(distancias_frente_direita) < self.const_dist_obstaculo:
             # Define que o obstaculo esta a direita
+            self.distancia_frente = min(distancias_frente_direita)
             self.obstaculo_a_frente = True
             self.direcao_obstaculo = 1
 
@@ -190,49 +211,49 @@ class ControleRobo(Node):
             area_blob = cv2.contourArea(maior_contorno)
 
             # Define que chegou na bandeira caso essa ocupe mais de 2,5% da imagem
-            self.chegou_na_bandeira = self.percentual_bandeira > 0.025
+            self.chegou_na_bandeira = self.percentual_bandeira > 0.02
         
         # Caso esteja no estado POSICIONANDO_NA_BANDEIRA
         # Calcula a coordenada x do mastro da bandeira considerando apenas a parte inferior da imagem
-        if self.estado_atual == ESTADOS.POSICIONANDO_NA_BANDEIRA:
-            # Define limite inferior (apenas a parte inferior da imagem)
-            y_limite = int(h * 2/3)
+        self.pos_x_mastro = -1
+        # Define limite inferior (apenas a parte inferior da imagem)
+        y_limite = int(h * 2/3)
 
-            # Cria uma máscara apenas da região inferior
-            mask_inferior = np.zeros_like(mask)
-            mask_inferior[y_limite:h, :] = mask[y_limite:h, :]
+        # Cria uma máscara apenas da região inferior
+        mask_inferior = np.zeros_like(mask)
+        mask_inferior[y_limite:h, :] = mask[y_limite:h, :]
 
-            # Quantos pixels da imagem pertencem à bandeira na região inferior
-            pixels_bandeira = cv2.countNonZero(mask_inferior)
-            area_imagem_inferior = (h - y_limite) * w
-            self.percentual_bandeira = pixels_bandeira / area_imagem_inferior
+        # Quantos pixels da imagem pertencem à bandeira na região inferior
+        pixels_bandeira = cv2.countNonZero(mask_inferior)
+        area_imagem_inferior = (h - y_limite) * w
+        self.percentual_bandeira = pixels_bandeira / area_imagem_inferior
 
-            # Detecta contornos apenas na região inferior
-            contours, _ = cv2.findContours(
-                mask_inferior,
-                cv2.RETR_EXTERNAL,
-                cv2.CHAIN_APPROX_SIMPLE
-            )
+        # Detecta contornos apenas na região inferior
+        contours, _ = cv2.findContours(
+            mask_inferior,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE
+        )
 
-            if contours:
-                # Seleciona apenas o maior blob
-                maior_contorno = max(contours, key=cv2.contourArea)
+        if contours:
+            # Seleciona apenas o maior blob
+            maior_contorno = max(contours, key=cv2.contourArea)
 
-                # Metade da altura da imagem
-                y_meio = h // 2
+            # Metade da altura da imagem
+            y_meio = h // 2
 
-                # Mantém apenas os pontos do contorno na metade inferior
-                pontos_inferiores = maior_contorno[maior_contorno[:, 0, 1] >= y_meio]
+            # Mantém apenas os pontos do contorno na metade inferior
+            pontos_inferiores = maior_contorno[maior_contorno[:, 0, 1] >= y_meio]
 
-                if len(pontos_inferiores) > 2:  # necessário para formar um contorno
-                    M = cv2.moments(pontos_inferiores)
+            if len(pontos_inferiores) > 2:  # necessário para formar um contorno
+                M = cv2.moments(pontos_inferiores)
 
-                    if M['m00'] != 0:
-                        cx = int(M['m10'] / M['m00'])
-                        cy = int(M['m01'] / M['m00'])
+                if M['m00'] != 0:
+                    cx = int(M['m10'] / M['m00'])
+                    cy = int(M['m01'] / M['m00'])
 
-                        # Define a coordenada x do mastro sendo o centro do maior blob
-                        self.pos_x_mastro = cx
+                    # Define a coordenada x do mastro sendo o centro do maior blob
+                    self.pos_x_mastro = cx
     
     # FUNCAO QUE DEFINE A MAQUINA DE ESTADOS DO ROBO E A SUA MOVIMENTACAO PARA CADA ESTADO
     def move_robot(self):
@@ -374,14 +395,26 @@ class ControleRobo(Node):
         elif self.estado_atual == ESTADOS.POSICIONANDO_NA_BANDEIRA:
 
             # Caso aconteca de perder o mastro de vista, volta para o estado "EXPLORANDO"
-            if self.pos_x_mastro == None:
+            if self.pos_x_mastro == -1:
                 self.estado_atual = ESTADOS.EXPLORANDO
+            # Calcula o angulo que faz com a bandeira para garantir que a barra nao bata
+            elif self.direcao_obstaculo == -1 and np.cos(self.menor_distancia_frente_esquerda * np.pi /180) * self.distancia_frente < 0.55:
+                twist.linear.x = -0.1
+            # Calcula o angulo que faz com a bandeira para garantir que a barra nao bata
+            elif self.direcao_obstaculo == 1 and np.cos(self.menor_distancia_frente_direita * np.pi /180) * self.distancia_frente < 0.55:
+                twist.linear.x = -0.1
             # Caso o mastro esteja a esquerda do centro da imagem, gira para a direita ate alinhar
             elif self.pos_x_mastro < self.centro_x - self.dx_mastro:
-                twist.angular.z = 0.2  # Gira em torno do proprio eixo
+                twist.angular.z = 0.1  # Gira em torno do proprio eixo
             # Caso o mastro esteja a direita do centro da imagem, gira para a esquerda ate alinhar
             elif self.pos_x_mastro > self.centro_x + self.dx_mastro:
-                twist.angular.z = -0.2  # Gira em torno do proprio eixo
+                twist.angular.z = -0.1  # Gira em torno do proprio eixo
+            # Caso esteja distante da bandeira, anda para frente
+            elif self.distancia_frente > 0.7:
+                twist.linear.x = 0.1
+            # Caso esteja muito proximo da bandeira, anda para tras
+            elif self.distancia_frente < 0.5:
+                twist.linear.x = -0.1
             # Caso o mastro esteja no centro da imagem, fica parado
             else:
                 twist.linear.x = 0.0
