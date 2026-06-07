@@ -19,6 +19,12 @@ O robô foi programado utilizando uma arquitetura baseada em um mapa de estados.
 
 - POSICIONANDOO_NA_BANDEIRA - Avalia se a imagem já tem uma porcentagem suficiente da bandeira. Dessa forma, começa a alinhar o robô corretamente com o mastro da bandeira, ficando completamente na direção correta e numa distância suficiente.
 
+## Slides para apresentação
+
+Os slides para apresentação na feira de extensão se encontram no link a seguir
+
+https://docs.google.com/presentation/d/1-3t1QLUyHwFFuJGPD4rX3NHQ02xn1N1pefTn20Z8CGg/edit?usp=drivesdk
+
 ## Pré-requisitos
 
 Certifique-se de que o workspace já foi compilado e que todas as dependências do ROS 2 estão instaladas.
