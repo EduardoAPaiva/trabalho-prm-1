@@ -5,6 +5,20 @@
 - Eduardo Alves Paiva - 15448481
 - Henrique Ribeiro de Figueiredo - 15645007
 
+## Arquitetura
+
+O robô foi programado utilizando uma arquitetura baseada em um mapa de estados. A seguir estão os cinco estados possíveis e uma breve explicação para cada um:
+
+- EXPLORANDDO - Nesse estado o robô ainda não enxergou a bandeira. Portanto, ele anda sempre para frente desviando de qualquer obstáculo que ele enxergar até encontrar a bandeira. Indepentemente do estado atual do robô, caso ele perca a bandeira de vista ele retorna a esse estado.
+
+- BANDEIRA_ENCONTRADA - Nesse estado o robô enxergo a bandeira em algum ponto da imagem gerada pela câmera. Dessa forma, começa a girar em torno do próprio eixo a fim de alinhar a bandeira ao centro da imagem. Quando alinha corretamente, avança para o próximo estado.
+
+- INDO_PARA_BANDEIRA - Nesse estado, o robô já está com a bandeira centralizada e avança para frente até chegar na bandeira. Caso a bandeira saia do centro da imagem, ele retorna para o estado BANDEIRA_ENCONTRADA, para recentralizar. Caso ande para frente mas encontre um obstáculo no meio do caminho, troca o estado para DESVIANDO.
+
+- DESVIANDO - Nesse estado, o robô enxergou um obstáculo. Portanto, ele vira para o lado oposto do qual enxergou o objeto até o objeto sair da frente. Avança até passar pelo objeto e começa a girar de volta para o lado da bandeira até reencontrá-la. Caso perca a bandeira de vista, volta para o estado EXPLORANDO.
+
+- POSICIONANDOO_NA_BANDEIRA - Avalia se a imagem já tem uma porcentagem suficiente da bandeira. Dessa forma, começa a alinhar o robô corretamente com o mastro da bandeira, ficando completamente na direção correta e numa distância suficiente.
+
 ## Pré-requisitos
 
 Certifique-se de que o workspace já foi compilado e que todas as dependências do ROS 2 estão instaladas.
