@@ -9,9 +9,9 @@
 
 O robô foi programado utilizando uma arquitetura baseada em um mapa de estados. A seguir estão os cinco estados possíveis e uma breve explicação para cada um:
 
-- EXPLORANDDO - Nesse estado o robô ainda não enxergou a bandeira. Portanto, ele anda sempre para frente desviando de qualquer obstáculo que ele enxergar até encontrar a bandeira. Indepentemente do estado atual do robô, caso ele perca a bandeira de vista ele retorna a esse estado.
+- EXPLORANDDO - Nesse estado, o robô ainda não enxergou a bandeira. Portanto, ele anda sempre para frente desviando de qualquer obstáculo que ele enxergar até encontrar a bandeira. Indepentemente do estado atual do robô, caso ele perca a bandeira de vista ele retorna a esse estado.
 
-- BANDEIRA_ENCONTRADA - Nesse estado o robô enxergo a bandeira em algum ponto da imagem gerada pela câmera. Dessa forma, começa a girar em torno do próprio eixo a fim de alinhar a bandeira ao centro da imagem. Quando alinha corretamente, avança para o próximo estado.
+- BANDEIRA_ENCONTRADA - Nesse estado, o robô enxergou a bandeira em algum ponto da imagem gerada pela câmera. Dessa forma, começa a girar em torno do próprio eixo a fim de alinhar a bandeira ao centro da imagem. Quando alinha corretamente, avança para o estado INDO_PARA_BANDEIRA.
 
 - INDO_PARA_BANDEIRA - Nesse estado, o robô já está com a bandeira centralizada e avança para frente até chegar na bandeira. Caso a bandeira saia do centro da imagem, ele retorna para o estado BANDEIRA_ENCONTRADA, para recentralizar. Caso ande para frente mas encontre um obstáculo no meio do caminho, troca o estado para DESVIANDO.
 
