@@ -148,7 +148,7 @@ def generate_launch_description():
             "-topic", "robot_description", # Descrição do robô a ser utilizada
             "-z", "1.0",                   # Altura inicial do robô
             "-x", "-8.0",                  # Posição no eixo X
-            "-y", "-0.7",                  # Posição no eixo X
+            "-y", "-0.5",                  # Posição no eixo X
             "--ros-args", "--log-level", "warn"
         ],
         parameters=[{"use_sim_time": True}],  # Usa o tempo simulado
