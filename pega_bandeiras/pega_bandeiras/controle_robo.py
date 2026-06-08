@@ -48,6 +48,7 @@ class ControleRobo(Node):
 
         # Estado interno
         self.obstaculo_a_frente = False             # Define se existe algo a menos de uma certa distancia usando o LIDAR
+        self.direcao_explorando = 0                 # Define a direcao para a qual esta desviano no momento para o estado EXPLORANDO
         self.direcao_obstaculo = 0                  # 1 -> direita e -1 -> esquerda
         self.percentual_bandeira = -1               # Diz a porcentagem que a bandeira ocupa na camera
         self.menor_distancia_esquerda = -1          # Angulo da menor distancia a frente esquerda
@@ -275,11 +276,17 @@ class ControleRobo(Node):
         # CASO ESTEJA NO ESTADO "EXPLORANDO"
         # Nao sabe onde a bandeira esta, e anda aleatoriamente desviando dos obstaculos ate encontrar
         if self.estado_atual == ESTADOS.EXPLORANDO:
-            # Anda pra frente enquanto nao encontrar obstaculos
+            # Anda pra frente enquanto nao encontrar obstaculos e salva a direcao como zero (frente)
             if not self.obstaculo_a_frente:
+                self.direcao_explorando = 0
                 twist.linear.x = 0.5  # Move para frente
-            # Quando encontra, gira para desviar
+            # Caso ja esteja desviando para um direcao, continua para ela ate nao haver mais obstaculos
+            # Isso evita que o robo fique preso num canto realizando um movimento de vai e volta para os lados
+            elif self.direcao_explorando != 0:
+                twist.angular.z = self.direcao_explorando * 0.3
+            # Quando encontra um obstaculo pela primeita vez, gira para desviar e salva a direcao para a qual esta desviando
             else:
+                self.direcao_explorando = self.direcao_obstaculo
                 twist.angular.z = self.direcao_obstaculo * 0.3  # Gira em torno do proprio eixo
 
             # Muda para o estado "BANDEIRA_ENCONTRADA" quando reconhece a bandeira
