@@ -283,7 +283,11 @@ class ControleRobo(Node):
             # Caso ja esteja desviando para um direcao, continua para ela ate nao haver mais obstaculos
             # Isso evita que o robo fique preso num canto realizando um movimento de vai e volta para os lados
             elif self.direcao_explorando != 0:
-                twist.angular.z = self.direcao_explorando * 0.3
+
+                if self.distancia_frente < self.const_dist_obstaculo * 0.63:
+                    twist.linear.x = -0.5
+                else:
+                    twist.angular.z = self.direcao_explorando * 0.3
             # Quando encontra um obstaculo pela primeita vez, gira para desviar e salva a direcao para a qual esta desviando
             else:
                 self.direcao_explorando = self.direcao_obstaculo
